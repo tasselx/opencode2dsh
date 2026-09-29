@@ -1,36 +1,80 @@
 /**
- * IP 池 plugin card: one card inside 设置 → 插件 → 可配置插件 (the
- * `settings.plugin.item` slot keyed by the `ip-pool` namespace). Configuration
- * rides the OFFICIAL settings scope (rc.2 apiproxy serves every registered
- * namespace); runtime state and probe actions ride the plugin's loopback
- * bridge (/status, /probe). Every setting applies live on save — no restart
- * (docs/ip-pool.md §5).
+ * IP 池 configuration page: the body of the plugin row's page on the
+ * Plugins page (`plugins.row.config`, keyed `<package>#<row id>`). The host
+ * page owner supplies `form` (Config-derived state + `mutate`) for this
+ * plugin entry; the volatile `ipPool` field is what this page edits. Runtime
+ * state and probe actions ride the plugin's loopback bridge (/status, /probe).
+ * Every setting applies live on save — no restart (docs/ip-pool.md §5).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { IconChevronDownOutline14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-// Type-only: pulls the ui-settings-plugins SlotMap merge (the
-// 'settings.plugin.item' keyed entry the configurable tab declares at runtime).
-import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
-import type { SettingsScope, SettingsScopeSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+// Type-only: pulls the plugin-manager SlotMap merge (the keyed
+// 'plugins.row.config' entry the Plugins page declares at runtime).
+import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
 import type { en } from './locales.ts'
 import styles from './ip-pool.module.css'
 
-/** Injected dependencies of the card (slot `inject`). */
+/** Injected dependencies of the page (slot `inject`). */
 export interface IpPoolCardInjected {
-  /** The officially bound ip-pool settings scope (rc.2: always available). */
-  scope: SettingsScope<IpPoolSettingsValue>
-  /** uSES subscription hook bound to the scope snapshot. */
-  useSnapshot: () => SettingsScopeSnapshot<IpPoolSettingsValue>
-  /** Card copy. */
+  /** Page copy. */
   t: (key: keyof typeof en) => string
 }
 
 /** Props delivered by the slot outlet (inject face spread flat). */
 export type IpPoolCardProps =
-  PropsRuntime<'settings.plugin.item'>
+  PropsRuntime<'plugins.row.config'>
   & InjectFace<IpPoolCardInjected>
+
+/** Sync state of the `ipPool` field of this plugin entry's Config. */
+export interface IpPoolSnapshot {
+  status: 'loading' | 'ready' | 'unavailable'
+  value: IpPoolSettingsValue | undefined
+  /** Composition layer beneath the user's overrides, when known. */
+  base: unknown
+  writable: boolean
+}
+
+/** One field-level edit of `ipPool`. */
+export type IpPoolEdit = { op: 'set'; field: string; value: unknown } | { op: 'unset'; field: string }
+
+/** Atomic field-level writes against `ipPool`; a Host refusal rejects. */
+export interface IpPoolWriter {
+  mutate(edits: readonly IpPoolEdit[]): Promise<void>
+}
+
+type PageForm = NonNullable<IpPoolCardProps['form']>
+
+/** Config field this page edits. */
+const IP_POOL_FIELD = 'ipPool'
+
+/** Project the entry snapshot onto the `ipPool` field. */
+export function toSnapshot(state: PageForm['state']): IpPoolSnapshot {
+  const section = (input: unknown): IpPoolSettingsValue | undefined => {
+    const record = input as Record<string, unknown> | null | undefined
+    return (record?.[IP_POOL_FIELD] ?? undefined) as IpPoolSettingsValue | undefined
+  }
+  return {
+    status: state.status,
+    value: section(state.value),
+    base: section(state.base),
+    writable: state.writable,
+  }
+}
+
+/** Bind edits to the page's `mutate` (one atomic, revision-fenced batch). */
+export function toWriter(form: PageForm): IpPoolWriter {
+  return {
+    mutate: async (edits) => {
+      const accepted = await form.mutate(
+        edits.map((edit) => edit.op === 'set'
+          ? { op: 'set' as const, path: [IP_POOL_FIELD, edit.field], value: edit.value }
+          : { op: 'unset' as const, path: [IP_POOL_FIELD, edit.field] }),
+      )
+      if (!accepted) throw new Error('the deployment did not accept this change')
+    },
+  }
+}
 
 /** The resolved ip-pool settings value (mirrors the schemastery schema). */
 export interface IpPoolSettingsValue {
@@ -161,9 +205,9 @@ function formFromValue(value: IpPoolSettingsValue): FormState {
 }
 
 /** Field writes landing the form on the resolved value, in write order. */
-interface FieldWrite { field: string; op: 'set'; value: unknown }
+type FieldWrite = Extract<IpPoolEdit, { op: 'set' }>
 
-function diffWrites(form: FormState, snapshot: SettingsScopeSnapshot<IpPoolSettingsValue>): FieldWrite[] {
+function diffWrites(form: FormState, snapshot: IpPoolSnapshot): FieldWrite[] {
   const value = snapshot.value
   const base = snapshot.base as Partial<IpPoolSettingsValue> | undefined
   const writes: FieldWrite[] = []
@@ -496,9 +540,8 @@ function ExitTable(props: { status: PoolStatusView | null; t: IpPoolCardInjected
 }
 
 /** The card body. */
-function CardBody(props: Required<IpPoolCardInjected>): ReactNode {
-  const { scope, useSnapshot, t } = props
-  const snapshot = useSnapshot()
+function CardBody(props: IpPoolCardInjected & { scope: IpPoolWriter; snapshot: IpPoolSnapshot }): ReactNode {
+  const { scope, snapshot, t } = props
   const [form, setForm] = useState<FormState>(() => emptyForm())
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -603,41 +646,37 @@ function CardBody(props: Required<IpPoolCardInjected>): ReactNode {
     }
     setSaving(true)
     setError(null)
-    let firstFailure: string | null = null
-    for (const write of writes) {
-      try {
-        await scope.set(write.field, write.value)
-      } catch (err) {
-        firstFailure ??= err instanceof Error ? err.message : t('saveError')
-      }
+    let failure: string | null = null
+    try {
+      await scope.mutate(writes)
+    } catch (err) {
+      failure = err instanceof Error ? err.message : t('saveError')
     }
     setSaving(false)
-    if (firstFailure === null) {
+    if (failure === null) {
       setSaved(true)
     } else {
       setSaved(false)
-      setError(firstFailure)
+      setError(failure)
     }
   }
 
   const handleReset = async (): Promise<void> => {
     setSaving(true)
     setError(null)
-    let firstFailure: string | null = null
-    for (const field of ['enabled', 'free', 'manual', 'subscription', 'singbox', 'pinnedExitId', 'pinnedStrict', 'probeModels', 'maxConcurrentProbes']) {
-      try {
-        await scope.unset(field)
-      } catch (err) {
-        firstFailure ??= err instanceof Error ? err.message : t('saveError')
-      }
+    let failure: string | null = null
+    try {
+      await scope.mutate(['enabled', 'free', 'manual', 'subscription', 'singbox', 'pinnedExitId', 'pinnedStrict', 'probeModels', 'maxConcurrentProbes'].map((field) => ({ op: 'unset' as const, field })))
+    } catch (err) {
+      failure = err instanceof Error ? err.message : t('saveError')
     }
     setSaving(false)
-    if (firstFailure === null) {
+    if (failure === null) {
       setForm(formFromValue({ ...DEFAULTS, ...(snapshot.base as Partial<IpPoolSettingsValue> | undefined) } as IpPoolSettingsValue))
       setSaved(true)
     } else {
       setSaved(false)
-      setError(firstFailure)
+      setError(failure)
     }
   }
 
@@ -658,7 +697,7 @@ function CardBody(props: Required<IpPoolCardInjected>): ReactNode {
   const pinExit = async (exitId: string): Promise<void> => {
     setActionBusy(true)
     try {
-      await scope.set('pinnedExitId', exitId)
+      await scope.mutate([{ op: 'set', field: 'pinnedExitId', value: exitId }])
       setForm((current) => ({ ...current, pinnedExitId: exitId }))
     } catch (err) {
       setError(err instanceof Error ? err.message : t('saveError'))
@@ -921,31 +960,19 @@ function CardBody(props: Required<IpPoolCardInjected>): ReactNode {
 }
 
 /**
- * The IP 池 plugin card. Renders nothing until the slot outlet supplies the
- * inject face; the section stacks cards and reports their count.
+ * The IP 池 configuration page. `summary` is the row's one-liner; `page` is
+ * the form. Renders nothing until the slot outlet supplies the inject face.
  */
 export function IpPoolCard(props: IpPoolCardProps): ReactNode {
-  const { scope, useSnapshot, t } = props
-  const [open, setOpen] = useState(false)
-  useMemo(() => undefined, []) // keep React import meaningful for jsx-runtime parity
-  if (scope === undefined || useSnapshot === undefined || t === undefined) return null
+  const { view, form, t } = props
+  const writer = useMemo(() => (form === undefined ? undefined : toWriter(form)), [form])
+  const snapshot = useMemo(() => (form === undefined ? undefined : toSnapshot(form.state)), [form?.state]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (t === undefined) return null
+  if (view === 'summary') return t('description')
+  if (writer === undefined || snapshot === undefined) return null
   return (
-    <li className={styles.card}>
-      <button
-        type="button"
-        className={styles.header}
-        aria-expanded={open}
-        aria-label={`${t(open ? 'collapse' : 'expand')}: ${t('title')}`}
-        data-testid="ip-pool-card-header"
-        onClick={() => setOpen((current) => !current)}
-      >
-        <span className={styles.headText}>
-          <span className={styles.name}>{t('title')}</span>
-          <span className={styles.description}>{t('description')}</span>
-        </span>
-        <IconChevronDownOutline14 className={styles.chevron + (open ? ` ${styles.chevronOpen}` : '')} />
-      </button>
-      {open && <CardBody scope={scope} useSnapshot={useSnapshot} t={t} />}
-    </li>
+    <div className={styles.page} data-testid="ip-pool-page">
+      <CardBody scope={writer} snapshot={snapshot} t={t} />
+    </div>
   )
 }

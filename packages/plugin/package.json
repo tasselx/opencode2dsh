@@ -1,6 +1,6 @@
 {
   "name": "@opencode2dsh/dsh-plugin",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Free OpenCode Zen models for DeepSeek Harness (DSH): native dsh-llm adapter plugin, no API key.",
   "type": "module",
   "main": "lib/index.js",
@@ -20,10 +20,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FishBottle7/opencode2dsh.git"
+    "url": "git+https://github.com/tasselx/opencode2dsh.git"
   },
-  "homepage": "https://github.com/FishBottle7/opencode2dsh#readme",
-  "bugs": "https://github.com/FishBottle7/opencode2dsh/issues",
+  "homepage": "https://github.com/tasselx/opencode2dsh#readme",
+  "bugs": "https://github.com/tasselx/opencode2dsh/issues",
   "author": "FishBottle7 (https://github.com/FishBottle7)",
   "engines": {
     "node": ">=20"
@@ -34,9 +34,9 @@
     },
     "client": {
       "inject": [
-        "slots",
-        "locale",
-        "settingsScope"
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-plugin-manager"
       ],
       "platform": "web"
     }
@@ -67,7 +67,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/schemastery": "^3.18.1",
+    "@deepseek-ai/schemastery": "^3.18.4",
     "@earendil-works/pi-ai": "^0.82.1",
     "undici": "^8.10.1",
     "yaml": "^2.9.0"
@@ -79,14 +79,15 @@
     ]
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-client-locale": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-client-runtime": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-client-ui-primitives": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-client-ui-settings-plugins": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-client-ui-slots": "0.1.1-rc.2",
-    "@deepseek-ai/dsh-credentials": "^0.1.1-rc.2",
-    "@deepseek-ai/dsh-settings": "^0.1.1-rc.2",
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-api-remotes": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-locale": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-plugin-manager": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-credentials": "^0.2.0-rc.1",
     "@types/node": "^24.0.0",
     "@types/react": "~18.3.31",
     "lightningcss": "1.32.0",

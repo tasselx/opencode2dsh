@@ -135,3 +135,66 @@ test('subscription urls from the settings shape flow into the config assembly', 
   const passed = starts[0]!.config as { ipPool?: { subscriptions?: string[] } }
   assert.deepEqual(passed.ipPool?.subscriptions, ['https://x/y'])
 })
+
+// -- DSH >= 0.1.7: ipPool is a volatile Config field (no settings.register) ----
+
+/** A cosmokit-shaped volatile reference the loader commits into. */
+function volatileRef<T>(initial: T) {
+  let current = Object.freeze(initial)
+  return { get: () => current, write: (next: T) => { current = Object.freeze(next) } }
+}
+
+/** Ctx whose `on` records loader/volatile-update listeners; no register seam. */
+function volatileCtx() {
+  const listeners = new Set<() => void>()
+  const ctx = {
+    logger: { info() {}, warn() {}, error() {} },
+    settings: { mutate: async () => {} },
+    on(event: string, listener: () => void) {
+      assert.equal(event, 'loader/volatile-update')
+      listeners.add(listener)
+      return () => listeners.delete(listener)
+    },
+  } as unknown as PluginContext
+  return { ctx, fire: () => { for (const listener of listeners) listener() } }
+}
+
+test('volatile: boot-enabled assembles from the live reference, without settings.register', async () => {
+  resetCalls()
+  const { ctx } = volatileCtx()
+  const ref = volatileRef(IpPoolConfigSchema({ enabled: true, manual: ['http://3.3.3.3:3'] }))
+  const controller = applyIpPoolSettings(ctx, { ipPool: ref } as never, ctx.logger, { assemble })
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(starts.length, 1)
+  assert.ok(controller.runtime !== null)
+  const passed = starts[0]!.config as { ipPool?: { manual?: string[] } }
+  assert.deepEqual(passed.ipPool?.manual, ['http://3.3.3.3:3'])
+  // the runtime receives plain data, never the reference or a frozen snapshot
+  assert.equal(typeof (passed.ipPool as { get?: unknown }).get, 'undefined')
+  assert.equal(Object.isFrozen(passed.ipPool?.manual), false)
+})
+
+test('volatile: a loader/volatile-update commit assembles then reconfigures live', async () => {
+  resetCalls()
+  const { ctx, fire } = volatileCtx()
+  const ref = volatileRef(IpPoolConfigSchema({}))
+  const config = { ipPool: ref }
+  const controller = applyIpPoolSettings(ctx, config as never, ctx.logger, { assemble })
+  await new Promise((r) => setTimeout(r, 10))
+  assert.equal(starts.length, 0)
+
+  ref.write(IpPoolConfigSchema({ enabled: true, subscription: { urls: ['https://x/y'] } }) as never)
+  fire()
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(starts.length, 1, 'enable commit assembles the runtime')
+  assert.ok(controller.runtime !== null)
+  assert.ok(config.ipPool === ref, 'the entry Config reference is never overwritten')
+
+  ref.write(IpPoolConfigSchema({ enabled: true, pinnedExitId: 'http://127.0.0.1:7897', pinnedStrict: true }) as never)
+  fire()
+  await new Promise((r) => setTimeout(r, 30))
+  assert.equal(starts.length, 1, 'no re-assembly without an enable flip')
+  const applied = reconfigures.at(-1)!.ipPool as Record<string, unknown>
+  assert.equal(applied.pinnedExitId, 'http://127.0.0.1:7897')
+  assert.equal(applied.pinnedStrict, true)
+})

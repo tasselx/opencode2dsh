@@ -402,3 +402,14 @@
   font-size: 12px;
   cursor: pointer;
 }
+
+.page {
+  display: flex;
+  flex-direction: column;
+}
+
+.page > .body {
+  border-top: 0;
+  margin: 0;
+  padding-top: 0;
+}

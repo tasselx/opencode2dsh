@@ -7,9 +7,9 @@
 无需 API Key。无需注册。无需额外进程。
 
 [![npm](https://img.shields.io/npm/v/@opencode2dsh%2Fdsh-plugin)](https://www.npmjs.com/package/@opencode2dsh/dsh-plugin)
-[![license](https://img.shields.io/npm/l/@opencode2dsh%2Fdsh-plugin)](https://github.com/FishBottle7/opencode2dsh/blob/master/LICENSE)
+[![license](https://img.shields.io/npm/l/@opencode2dsh%2Fdsh-plugin)](https://github.com/tasselx/opencode2dsh/blob/master/LICENSE)
 [![node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen)](https://nodejs.org)
-[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/FishBottle7/opencode2dsh)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/tasselx/opencode2dsh)
 
 [English](README.md) | 简体中文
 
@@ -38,10 +38,28 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
 
 ## 安装
 
-**从插件市场安装**（推荐，收录后可用）：在 DSH 里打开 **设置 → 插件市场**，
+**从 GitHub Release 安装**（推荐——本仓库跟进最新版 DSH；npm 上的
+`@opencode2dsh/dsh-plugin` 是上游未维护的旧构建，不支持 DSH ≥ 0.1.7）。每个
+Release 都附带打好的 `.tgz`：
+
+```sh
+dsh plugin --profile web add https://github.com/tasselx/opencode2dsh/releases/download/v0.3.4/opencode2dsh-dsh-plugin-0.3.4.tgz
+```
+
+也可以在 [Releases 页面](https://github.com/tasselx/opencode2dsh/releases)
+下载 `.tgz` 后安装本地文件：
+
+```sh
+dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
+```
+
+升级时用新版 Release 的地址重新执行同一条命令，然后重启 `dsh web`。IP 池设置
+位于 **插件 → @opencode2dsh/dsh-plugin → 配置**。
+
+**从插件市场安装**（收录后可用）：在 DSH 里打开 **设置 → 插件市场**，
 搜索 `opencode2dsh`，一键安装。
 
-**从 npm 安装**：
+**从 npm 安装**（上游旧构建，仅适用于 DSH < 0.1.7）：
 
 ```sh
 dsh plugin --profile web add @opencode2dsh/dsh-plugin
@@ -50,7 +68,7 @@ dsh plugin --profile web add @opencode2dsh/dsh-plugin
 **从源码安装**（自行打包）：
 
 ```sh
-git clone https://github.com/FishBottle7/opencode2dsh.git
+git clone https://github.com/tasselx/opencode2dsh.git
 cd opencode2dsh/packages/plugin
 pnpm install && pnpm pack
 dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
@@ -131,6 +149,7 @@ https://opencode.ai/zen/v1        ← Authorization: Bearer public
 
 | 现象 | 可能原因与处理 |
 | --- | --- |
+| 新版 DSH（≥ 0.1.7）上找不到 IP 池设置页 | 插件 ≤ 0.3.3 用到的设置接口已被新版 DSH 移除。升级到 ≥ 0.3.4；入口：**插件 → @opencode2dsh/dsh-plugin → 配置**。 |
 | 启动页报 `Failed to load plugins … list slot "settings.plugin.item" requires options.id` | DSH 版本过旧（≤ 0.1.0-rc.6）：设置槽位契约与插件 0.3.0 的浏览器半边不匹配。升级 DSH 到 ≥ 0.1.0-rc.7（推荐最新）即可；插件 ≥ 0.3.1 已自带双形态兼容，旧版 DSH 上最多没有设置卡片，模型路由不受影响。 |
 | 只有 3 个模型 | 启动时网络未就绪，重试会在约 1 分钟内补齐；看 `adapter-status.json` 里的 `lastError`。 |
 | `lastError: "fetch failed"` 持续出现 | 出站 HTTPS 到 `opencode.ai` 被拦截；检查代理/VPN 规则。 |
@@ -147,7 +166,7 @@ https://opencode.ai/zen/v1        ← Authorization: Bearer public
 ## 开发
 
 ```sh
-git clone https://github.com/FishBottle7/opencode2dsh.git
+git clone https://github.com/tasselx/opencode2dsh.git
 cd opencode2dsh/packages/plugin
 pnpm install
 pnpm typecheck && pnpm test   # 44 个单元测试
@@ -179,4 +198,4 @@ pnpm build                    # 打包到 lib/
 
 ## 许可证
 
-[MIT](./LICENSE) © FishBottle7
+[MIT](./LICENSE) © FishBottle7（原作者）；由 [tasselx](https://github.com/tasselx) 以 fork 形式维护，上游为 [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh)

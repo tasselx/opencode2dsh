@@ -41,10 +41,19 @@ export async function removeProviderRoute(
   seams: Pick<DshSeams, 'settings'>,
   providerId: string,
 ): Promise<boolean> {
-  const namespace = seams.settings.get('llm-pi-ai') as { providers?: Record<string, unknown> } | undefined
+  const namespace = readNamespace(seams.settings, 'llm-pi-ai') as { providers?: Record<string, unknown> } | undefined
   if (!namespace?.providers || !(providerId in namespace.providers)) return false
   await seams.settings.mutate('llm-pi-ai', [{ op: 'unset', path: ['providers', providerId] }])
   return true
+}
+
+/**
+ * Read one entry's live section: `settings.get` on hosts that still have it,
+ * else the entry's descriptor from `settings.describe()` (DSH >= 0.1.7).
+ */
+function readNamespace(settings: DshSeams['settings'], ns: string): unknown {
+  if (typeof settings.get === 'function') return settings.get(ns)
+  return settings.describe?.().find((descriptor) => descriptor.ns === ns)?.value
 }
 
 /** Minimal settings/credentials seam so tests can run against fakes. */
@@ -53,7 +62,8 @@ export interface DshSeams {
     set(ref: string, value: string): Promise<void>
   }
   settings: {
-    get(ns: string): unknown
+    get?(ns: string): unknown
+    describe?(): Array<{ ns: string; value?: unknown }>
     mutate(ns: string, ops: Array<{ op: 'set' | 'unset'; path: Array<string | number>; value?: unknown }>): Promise<void>
   }
   logger: { info(message: string): void; warn(message: string): void }

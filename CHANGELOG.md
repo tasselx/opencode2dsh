@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.3.4 (2026-09-29)
+
+### Fixed
+
+- **适配最新版 DSH（0.1.7 起 / 0.2.0-rc.1）：IP 池设置页与实时生效恢复。**
+  新版 DSH 移除了 `ctx.settings.get/register` 与 `settingsScope`，以及
+  `settings.plugin.item` 槽位：旧版插件在新版上表现为"设置页消失、IP 池只能靠
+  改 `cordis.patch.yml`、启动日志出现 `settings seam lacks register` 与
+  `stale route cleanup failed: seams.settings.get is not a function`"。现在：
+  插件导出 `Config`，`ipPool` 作为 volatile 字段由新版加载器直接热更新（保存
+  即生效，无需重启）；配置页改为注册到"插件"页该插件行的专属页面
+  （`plugins.row.config`，进入方式：插件 → `@opencode2dsh/dsh-plugin` → 组件
+  `opencode2dsh` → 配置），通过宿主的 Config 表单读写。旧版 DSH（仍带
+  `settings.register`）继续走原有命名空间通道。
+- **启动时清理旧 sidecar 路由不再报错**：新版无 `settings.get`，改用
+  `settings.describe()` 读取 `llm-pi-ai`。
+- **浏览器半边的依赖声明**改为新版要求的包名形式（`dsh.client.inject`），不再
+  请求已不存在的 `settingsScope` 服务，否则新版上整个浏览器半边不会加载。
+
+### Changed
+
+- 插件声明 `settings.configure({ auto: false })`，避免新版宿主为本插件再生成一份
+  自动表单页。
+- 开发依赖对齐到 `@deepseek-ai/*@0.2.0-rc.1`（仅类型与构建期）；`schemastery`
+  升至 `^3.18.4`（volatile 字段所需）。
+
 ## 0.3.3 (2026-09-18)
 
 ### Added

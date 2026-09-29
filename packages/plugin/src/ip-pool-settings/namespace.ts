@@ -16,10 +16,13 @@
  */
 
 import Schema from '@deepseek-ai/schemastery'
-import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 
-/** Namespace owned by this plugin (kebab-case per brand rules). */
-export const IP_POOL_NAMESPACE = settingsNamespace('ip-pool')
+/**
+ * Legacy settings namespace (kebab-case). Only hosts that still expose
+ * `ctx.settings.register` (DSH < 0.1.7) use it; newer hosts edit the plugin
+ * entry's volatile `ipPool` Config field instead.
+ */
+export const IP_POOL_NAMESPACE = 'ip-pool'
 
 /** docs/ip-pool.md §4.6 probe defaults (S3 first entry is the doc-mandated default). */
 const DEFAULT_PROBE_MODEL = 'big-pickle'

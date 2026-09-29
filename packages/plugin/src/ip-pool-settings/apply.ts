@@ -3,10 +3,15 @@
  * §5.1) to the runtime assembly (ip-pool.ts) with live apply, and mounts the
  * status/probe bridge (§5.3) on the host webServer.
  *
+ * Two settings seams, picked at runtime:
+ *  - DSH >= 0.1.7: `ipPool` is a volatile Config field of the plugin entry
+ *    (the page edits it through configForms/plugins.row.config); commits arrive
+ *    as `loader/volatile-update` and the live value is `config.ipPool.get()`;
+ *  - older DSH: the `ip-pool` namespace via `ctx.settings.register` + watch.
+ *
  * Lifecycle (all no-restart, docs §7 IP-5 acceptance):
  *  - entry config enabled at boot: pool assembles immediately;
- *  - namespace registers with the composition entry as `base`, applies live;
- *  - watch(next) hot-applies every commit through runtime.reconfigure() —
+ *  - every commit hot-applies through runtime.reconfigure() —
  *    including the `enabled` flip (dispatcher install/uninstall) and address
  *    list edits (manual rows rebuilt, pinned re-pinned);
  *  - bridge routes mount once the webServer service shows up (ctx.inject),
@@ -24,6 +29,19 @@ type AnyIpPoolSection = Partial<IpPoolSettings> & {
   subscriptions?: string[]
   free?: Partial<IpPoolSettings['free']>
   subscription?: Partial<IpPoolSettings['subscription']>
+}
+
+/** A volatile Config reference (`@deepseek-ai/cosmokit` createVolatile shape). */
+interface VolatileRef<T> { get(): T }
+
+function isVolatileRef(value: unknown): value is VolatileRef<AnyIpPoolSection | undefined> {
+  return typeof value === 'object' && value !== null && typeof (value as { get?: unknown }).get === 'function'
+}
+
+/** Unwrap a volatile `ipPool` Config field into a detached, mutable plain section. */
+function readSection(value: unknown): AnyIpPoolSection | undefined {
+  const section = isVolatileRef(value) ? value.get() : (value as AnyIpPoolSection | undefined)
+  return section === undefined ? undefined : structuredClone(section)
 }
 
 /** Extract the ip-pool settings value with defaults filled (schema-independent). */
@@ -83,9 +101,11 @@ export function applyIpPoolSettings(
   deps: { assemble?: AssembleIpPool; listLiveModels?: () => string[] } = {},
 ): IpPoolController {
   const assemble = deps.assemble ?? defaultAssemble
+  const volatileSection = isVolatileRef(config.ipPool)
+  let current = withDefaults(readSection(config.ipPool))
   const controller: IpPoolController = {
     runtime: null,
-    settings: () => withDefaults(config.ipPool as Partial<IpPoolSettings> | undefined),
+    settings: () => current,
     asConfig: (value) => ({ ...config, ipPool: toIpPoolConfig(value) }),
   }
 
@@ -100,8 +120,7 @@ export function applyIpPoolSettings(
   // saved enabled:true must assemble the pool at boot — not only after the
   // next settings-page write. The entry config alone cannot see it.
   const applyCommitted = (value: IpPoolSettings): void => {
-    // Mirror the live value onto the entry-config shape reconfigure consumes.
-    config.ipPool = toIpPoolConfig(value)
+    current = value
     const rt = controller.runtime
     if (value.enabled && rt === null) {
       void ensureRuntime()
@@ -118,27 +137,32 @@ export function applyIpPoolSettings(
     }
   }
 
-  if (typeof ctx.settings?.register !== 'function') {
-    logger.warn('opencode2dsh: settings seam lacks register; ip-pool settings page disabled (patch config still works)')
-    if (controller.settings().enabled) {
+  let disposeWatch: () => void = () => {}
+  if (volatileSection) {
+    // Boot: apply the resolved entry value. Watch: every volatile commit of
+    // the entry re-reads the live reference — one path for both.
+    applyCommitted(current)
+    const off = ctx.on?.('loader/volatile-update' as never, (() => {
+      applyCommitted(withDefaults(readSection(config.ipPool)))
+    }) as never)
+    if (typeof off === 'function') disposeWatch = off
+  } else if (typeof ctx.settings?.register === 'function') {
+    const scope = ctx.settings.register(IP_POOL_NAMESPACE, IpPoolConfigSchema, {
+      base: controller.settings(),
+      applies: 'live',
+    })
+    applyCommitted(withDefaults(scope.get() as Partial<IpPoolSettings> | undefined))
+    disposeWatch = scope.watch((next: unknown) => {
+      applyCommitted(withDefaults(next as Partial<IpPoolSettings>))
+    })
+  } else {
+    logger.warn('opencode2dsh: no live settings seam; ip-pool settings page disabled (patch config still works)')
+    if (current.enabled) {
       void ensureRuntime().catch((err) => {
         logger.warn(`opencode2dsh: ip pool start failed: ${err instanceof Error ? err.message : String(err)}`)
       })
     }
-    return controller
   }
-
-  const scope = ctx.settings.register(IP_POOL_NAMESPACE, IpPoolConfigSchema, {
-    base: controller.settings(),
-    applies: 'live',
-  })
-
-  // Boot: apply the RESOLVED namespace value (the persisted document is part
-  // of it). Watch: apply every commit the same way — one path for both.
-  applyCommitted(withDefaults(scope.get() as Partial<IpPoolSettings> | undefined))
-  const disposeWatch = scope.watch((next: unknown) => {
-    applyCommitted(withDefaults(next as Partial<IpPoolSettings>))
-  })
 
   // Bridge: mount once webServer is up. The handlers read the live runtime
   // and the current settings value at request time (never stale closures).
@@ -173,7 +197,7 @@ export function applyIpPoolSettings(
     })) as unknown as Promise<unknown>
   }
 
-  logger.info('opencode2dsh: settings namespace "ip-pool" registered — live apply via 设置 → 插件 → IP 池')
+  logger.info('opencode2dsh: ip-pool settings live — edit via 插件 → opencode2dsh → 配置')
   const maybeEffect = (ctx as { effect?: PluginContext['effect'] }).effect
   if (typeof maybeEffect === 'function') {
     maybeEffect.call(ctx, () => () => {

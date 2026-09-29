@@ -7,9 +7,9 @@
 No API key. No registration. No extra process.
 
 [![npm](https://img.shields.io/npm/v/@opencode2dsh%2Fdsh-plugin)](https://www.npmjs.com/package/@opencode2dsh/dsh-plugin)
-[![license](https://img.shields.io/npm/l/@opencode2dsh%2Fdsh-plugin)](https://github.com/FishBottle7/opencode2dsh/blob/master/LICENSE)
+[![license](https://img.shields.io/npm/l/@opencode2dsh%2Fdsh-plugin)](https://github.com/tasselx/opencode2dsh/blob/master/LICENSE)
 [![node](https://img.shields.io/badge/node-%E2%89%A520-brightgreen)](https://nodejs.org)
-[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/FishBottle7/opencode2dsh)
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-blue)](https://github.com/tasselx/opencode2dsh)
 
 English | [简体中文](README.zh-CN.md)
 
@@ -39,11 +39,30 @@ nothing to host.
 
 ## Install
 
-**From the plugin market** (recommended, once this repo is listed there):
-in DSH open **Settings → Plugin Market**, search `opencode2dsh`, one-click
-install.
+**From a GitHub Release** (recommended — this fork tracks the latest DSH; the
+npm package `@opencode2dsh/dsh-plugin` is the unmaintained upstream build and
+does not support DSH ≥ 0.1.7). Every release attaches a ready-made `.tgz`:
 
-**From npm**:
+```sh
+dsh plugin --profile web add https://github.com/tasselx/opencode2dsh/releases/download/v0.3.4/opencode2dsh-dsh-plugin-0.3.4.tgz
+```
+
+Or download the `.tgz` from the
+[Releases page](https://github.com/tasselx/opencode2dsh/releases) and install
+the local file:
+
+```sh
+dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
+```
+
+To upgrade, run the same command with the newer release URL, then restart
+`dsh web`. The IP-pool settings live under **Plugins → @opencode2dsh/dsh-plugin
+→ Configure**.
+
+**From the plugin market** (once listed there): in DSH open **Settings →
+Plugin Market**, search `opencode2dsh`, one-click install.
+
+**From npm** (upstream build, DSH < 0.1.7 only):
 
 ```sh
 dsh plugin --profile web add @opencode2dsh/dsh-plugin
@@ -52,7 +71,7 @@ dsh plugin --profile web add @opencode2dsh/dsh-plugin
 **From source** (build the tarball yourself):
 
 ```sh
-git clone https://github.com/FishBottle7/opencode2dsh.git
+git clone https://github.com/tasselx/opencode2dsh.git
 cd opencode2dsh/packages/plugin
 pnpm install && pnpm pack
 dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
@@ -139,6 +158,7 @@ The plugin writes a health snapshot after every refresh round:
 
 | Symptom | Likely cause & fix |
 | --- | --- |
+| IP-pool settings page missing on DSH ≥ 0.1.7 | Plugin ≤ 0.3.3 used settings APIs that newer DSH removed. Upgrade to ≥ 0.3.4; the page lives under **Plugins → @opencode2dsh/dsh-plugin → Configure**. |
 | Boot screen shows `Failed to load plugins … list slot "settings.plugin.item" requires options.id` | Your DSH is too old (≤ 0.1.0-rc.6): the settings-slot contract predates the plugin 0.3.0 browser half. Upgrade DSH to ≥ 0.1.0-rc.7 (latest recommended). Plugin ≥ 0.3.1 registers in either slot shape, so on old DSH you lose at most the settings card — model routing is unaffected. |
 | Only 3 models | Startup fetch raced your network; retries land within ~1 min. Check `adapter-status.json` for `lastError`. |
 | `lastError: "fetch failed"` persisting | Outbound HTTPS to `opencode.ai` blocked; check proxy/VPN rules. |
@@ -155,7 +175,7 @@ The plugin writes a health snapshot after every refresh round:
 ## Development
 
 ```sh
-git clone https://github.com/FishBottle7/opencode2dsh.git
+git clone https://github.com/tasselx/opencode2dsh.git
 cd opencode2dsh/packages/plugin
 pnpm install
 pnpm typecheck && pnpm test   # 44 unit tests
@@ -189,4 +209,4 @@ Releasing: `pnpm pack` in `packages/plugin` (prepack builds and syncs docs).
 
 ## License
 
-[MIT](./LICENSE) © FishBottle7
+[MIT](./LICENSE) © FishBottle7 (original author); maintained by [tasselx](https://github.com/tasselx) as a fork of [FishBottle7/opencode2dsh](https://github.com/FishBottle7/opencode2dsh)

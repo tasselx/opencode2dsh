@@ -32,7 +32,11 @@ export interface PluginContext {
   llm?: { registerAdapter(providers: string[], adapter: unknown): unknown }
   credentials?: { set(ref: string, value: string): Promise<void> }
   settings?: {
-    get(ns: string): unknown
+    /** Removed in DSH >= 0.1.7; read through describe() there. */
+    get?(ns: string): unknown
+    describe?(): Array<{ ns: string; value?: unknown }>
+    /** Page policy for this plugin instance (DSH >= 0.1.7). */
+    configure?(presentation: { auto?: boolean }, owner?: unknown): () => void
     mutate(ns: string, ops: Array<{ op: 'set' | 'unset'; path: Array<string | number>; value?: unknown }>): Promise<void>
     /** Full seam (rc.2): namespace registration + owner scope (docs §5.1). */
     register?(ns: unknown, schema: unknown, options?: { base?: unknown; applies?: 'live' | 'restart' }): {
@@ -46,11 +50,13 @@ export interface PluginContext {
   }
   /** cordis fiber injection: run the callback once every listed service is up. */
   inject?(services: string[], callback: (ctx: PluginContext) => void | Promise<void>): unknown
-  effect?(fn: () => () => void): unknown
+  effect?(fn: () => () => void, name?: string): unknown
+  fiber?: unknown
   on?(event: string, listener: (...args: never[]) => unknown): () => void
 }
 
 export const name = 'opencode2dsh'
+export { Config } from './config-schema.ts'
 export const inject = ['llm', 'credentials', 'settings'] as const
 export function apply(ctx: PluginContext, config: Opencode2dshConfig = {}): { ready: Promise<ReadyInfo> } {
   if (resolveConfig(config).mode === 'sidecar') return applySidecar(ctx, config)
@@ -116,6 +122,13 @@ function applyAdapter(ctx: PluginContext, config: Opencode2dshConfig): { ready: 
   void catalog.start().catch((err) => {
     logger.error(`opencode2dsh: catalog start failed: ${err instanceof Error ? err.message : String(err)}`)
   })
+
+  // The Plugins page shows this plugin's own hand-written configuration page;
+  // opt out of schema-generated pages so the two never compete.
+  const settingsSeam = ctx.settings
+  if (typeof settingsSeam?.configure === 'function' && typeof ctx.effect === 'function') {
+    ctx.effect(() => settingsSeam.configure!({ auto: false }, ctx.fiber), 'opencode2dsh: settings page policy')
+  }
 
   // A sidecar leftover (llm-pi-ai.providers.opencode2dsh pointing at a dead
   // local port) would shadow the adapter registration and fail every dispatch

@@ -89,6 +89,22 @@ test('removeProviderRoute unsets the sidecar leftover only when present', async 
   // other providers untouched: unset is path-scoped, verified by the op above
 })
 
+test('removeProviderRoute reads the entry through describe() when settings.get is gone (DSH >= 0.1.7)', async () => {
+  const mutations: Array<{ ns: string; path: Array<string | number> }> = []
+  const settings = (providers: Record<string, unknown>): DshSeams['settings'] => ({
+    describe: () => [{ ns: 'other', value: {} }, { ns: 'llm-pi-ai', value: { providers } }],
+    mutate: async (ns, ops) => {
+      mutations.push({ ns, path: ops[0]!.path })
+    },
+  })
+  assert.equal(await removeProviderRoute({ settings: settings({ other: {} }) }, 'opencode2dsh'), false)
+  assert.equal(mutations.length, 0)
+  assert.equal(await removeProviderRoute({ settings: settings({ opencode2dsh: {} }) }, 'opencode2dsh'), true)
+  assert.deepEqual(mutations, [{ ns: 'llm-pi-ai', path: ['providers', 'opencode2dsh'] }])
+  // neither reader available: nothing to remove, never throws
+  assert.equal(await removeProviderRoute({ settings: { mutate: async () => {} } }, 'opencode2dsh'), false)
+})
+
 test('fetchHealth parses the healthz payload from a live server', async () => {
   const { createServer } = await import('node:http')
   const server = createServer((req, res) => {
