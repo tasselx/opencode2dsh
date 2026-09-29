@@ -314,7 +314,6 @@ function StringList(props: {
   }
   return (
     <div className={styles.field} data-testid={testId}>
-      <span className={styles.fieldLabel}>{label}</span>
       <span className={styles.fieldHint}>{hint}</span>
       {values.length > 0 && (
         <ul className={styles.rowList}>
@@ -337,6 +336,7 @@ function StringList(props: {
       <div className={styles.row}>
         <input
           className={styles.rowInput}
+          aria-label={label}
           value={draft}
           placeholder={placeholder}
           onChange={(event) => setDraft(event.target.value)}
