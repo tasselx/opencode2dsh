@@ -40,21 +40,22 @@ OpenCode 官方 CLI 无需登录即可使用的那批免费模型，它们会以
 
 **从 GitHub Release 安装**（推荐——本仓库跟进最新版 DSH；npm 上的
 `@opencode2dsh/dsh-plugin` 是上游未维护的旧构建，不支持 DSH ≥ 0.1.7）。每个
-Release 都附带打好的 `.tgz`：
+Release 都附带固定文件名的 `.tgz`，安装命令永远不变：
 
 ```sh
-dsh plugin --profile web add https://github.com/tasselx/opencode2dsh/releases/download/v0.3.4/opencode2dsh-dsh-plugin-0.3.4.tgz
+dsh plugin --profile web add https://github.com/tasselx/opencode2dsh/releases/latest/download/opencode2dsh-dsh-plugin.tgz
 ```
 
-也可以在 [Releases 页面](https://github.com/tasselx/opencode2dsh/releases)
-下载 `.tgz` 后安装本地文件：
+`/releases/latest/download/` 始终指向最新发布，所以**升级 = 再执行一遍同一条
+命令** + 重启 `dsh web`。需要固定版本时，到对应 Release（见
+[Releases 页面](https://github.com/tasselx/opencode2dsh/releases)）下载
+`opencode2dsh-dsh-plugin.tgz` 后安装本地文件：
 
 ```sh
-dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
+dsh plugin --profile web add ./opencode2dsh-dsh-plugin.tgz
 ```
 
-升级时用新版 Release 的地址重新执行同一条命令，然后重启 `dsh web`。IP 池设置
-位于 **插件 → @opencode2dsh/dsh-plugin → 配置**。
+IP 池设置位于 **插件 → @opencode2dsh/dsh-plugin → 配置**。
 
 **从插件市场安装**（收录后可用）：在 DSH 里打开 **设置 → 插件市场**，
 搜索 `opencode2dsh`，一键安装。

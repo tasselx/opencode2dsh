@@ -41,23 +41,26 @@ nothing to host.
 
 **From a GitHub Release** (recommended — this fork tracks the latest DSH; the
 npm package `@opencode2dsh/dsh-plugin` is the unmaintained upstream build and
-does not support DSH ≥ 0.1.7). Every release attaches a ready-made `.tgz`:
+does not support DSH ≥ 0.1.7). Every release attaches a ready-made `.tgz` under a stable name — the install
+command never changes:
 
 ```sh
-dsh plugin --profile web add https://github.com/tasselx/opencode2dsh/releases/download/v0.3.4/opencode2dsh-dsh-plugin-0.3.4.tgz
+dsh plugin --profile web add https://github.com/tasselx/opencode2dsh/releases/latest/download/opencode2dsh-dsh-plugin.tgz
 ```
 
-Or download the `.tgz` from the
-[Releases page](https://github.com/tasselx/opencode2dsh/releases) and install
-the local file:
+`/releases/latest/download/` always resolves to the newest release, so
+**upgrading is the same command again** + restarting `dsh web`.
+
+To pin a specific version, download `opencode2dsh-dsh-plugin.tgz` from that
+release's [Releases page](https://github.com/tasselx/opencode2dsh/releases)
+entry and install the local file:
 
 ```sh
-dsh plugin --profile web add ./opencode2dsh-dsh-plugin-<version>.tgz
+dsh plugin --profile web add ./opencode2dsh-dsh-plugin.tgz
 ```
 
-To upgrade, run the same command with the newer release URL, then restart
-`dsh web`. The IP-pool settings live under **Plugins → @opencode2dsh/dsh-plugin
-→ Configure**.
+The IP-pool settings live under **Plugins → @opencode2dsh/dsh-plugin →
+Configure**.
 
 **From the plugin market** (once listed there): in DSH open **Settings →
 Plugin Market**, search `opencode2dsh`, one-click install.
