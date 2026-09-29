@@ -16,6 +16,7 @@ test('client bundle is built and well-formed', () => {
   assert.ok(source.includes('window.__ModuleLoader__.load'), 'loader handoff present')
   assert.ok(source.includes('"@opencode2dsh/dsh-plugin"'), 'scoped bundle id stamped')
   assert.ok(source.includes('plugins.row.config'), 'plugins.row.config page registration present')
+  assert.ok(source.includes('plugins.bundle.config'), 'plugins.bundle.config card registration present')
   assert.ok(source.includes('@opencode2dsh/dsh-plugin#opencode2dsh'), 'row key is <package>#<row id>')
   assert.ok(!source.includes('settingsScope'), 'the removed settingsScope service is not requested')
   // A rejected page must not kill the plugin fiber (the boot screen lists the
@@ -50,6 +51,7 @@ test('client manifest is declared in package.json', () => {
   assert.equal(pkg.dsh.client.platform, 'web')
   assert.deepEqual(pkg.dsh.client.inject, [
     '@deepseek-ai/dsh-client-locale',
+    '@deepseek-ai/dsh-client-ui-settings',
     '@deepseek-ai/dsh-client-ui-slots',
     '@deepseek-ai/dsh-client-ui-plugin-manager',
   ])

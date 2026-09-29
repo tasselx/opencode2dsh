@@ -6,7 +6,7 @@
  * state and probe actions ride the plugin's loopback bridge (/status, /probe).
  * Every setting applies live on save — no restart (docs/ip-pool.md §5).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import type { InjectFace, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: pulls the plugin-manager SlotMap merge (the keyed
@@ -975,4 +975,35 @@ export function IpPoolCard(props: IpPoolCardProps): ReactNode {
       <CardBody scope={writer} snapshot={snapshot} t={t} />
     </div>
   )
+}
+
+/** Injected dependencies of the bundle-level page (`plugins.bundle.config`). */
+export interface IpPoolBundleInjected extends IpPoolCardInjected {
+  /** Live handle over this plugin entry's Config form (from `ctx.configForms`). */
+  ipPoolForm: {
+    getSnapshot(): PageForm['state']
+    subscribe(listener: () => void): () => void
+    mutate: PageForm['mutate']
+  }
+}
+
+/** Props delivered by the `plugins.bundle.config` outlet. */
+export type IpPoolBundleProps =
+  PropsRuntime<'plugins.bundle.config'>
+  & InjectFace<IpPoolBundleInjected>
+
+/**
+ * The same IP 池 page rendered on the bundle's own detail view: opening the
+ * package card on the Plugins page shows the form directly, without drilling
+ * into the row's Configure page. The row-level registration stays — both edit
+ * the same volatile `ipPool` field.
+ */
+export function IpPoolBundlePage(props: IpPoolBundleProps): ReactNode {
+  const { view, ipPoolForm, t } = props
+  const state = useSyncExternalStore(
+    (onChange) => ipPoolForm.subscribe(onChange),
+    () => ipPoolForm.getSnapshot(),
+  )
+  const form = useMemo<PageForm>(() => ({ state, mutate: ipPoolForm.mutate }), [state, ipPoolForm])
+  return <IpPoolCard view={view} form={form} t={t} />
 }

@@ -55,7 +55,7 @@ dsh plugin --profile web add https://github.com/tasselx/opencode2dsh/releases/la
 dsh plugin --profile web add ./opencode2dsh-dsh-plugin.tgz
 ```
 
-IP 池设置位于 **插件 → @opencode2dsh/dsh-plugin → 配置**。
+IP 池设置位于 **插件 → @opencode2dsh/dsh-plugin**——IP 池表单直接显示在包详情页（组件行的「配置」入口也保留）。
 
 **从插件市场安装**（收录后可用）：在 DSH 里打开 **设置 → 插件市场**，
 搜索 `opencode2dsh`，一键安装。
@@ -150,7 +150,7 @@ https://opencode.ai/zen/v1        ← Authorization: Bearer public
 
 | 现象 | 可能原因与处理 |
 | --- | --- |
-| 新版 DSH（≥ 0.1.7）上找不到 IP 池设置页 | 插件 ≤ 0.3.3 用到的设置接口已被新版 DSH 移除。升级到 ≥ 0.3.4；入口：**插件 → @opencode2dsh/dsh-plugin → 配置**。 |
+| 新版 DSH（≥ 0.1.7）上找不到 IP 池设置页 | 插件 ≤ 0.3.3 用到的设置接口已被新版 DSH 移除。升级到 ≥ 0.3.4；入口：**插件 → @opencode2dsh/dsh-plugin**，表单直接显示在包详情页。 |
 | 启动页报 `Failed to load plugins … list slot "settings.plugin.item" requires options.id` | DSH 版本过旧（≤ 0.1.0-rc.6）：设置槽位契约与插件 0.3.0 的浏览器半边不匹配。升级 DSH 到 ≥ 0.1.0-rc.7（推荐最新）即可；插件 ≥ 0.3.1 已自带双形态兼容，旧版 DSH 上最多没有设置卡片，模型路由不受影响。 |
 | 只有 3 个模型 | 启动时网络未就绪，重试会在约 1 分钟内补齐；看 `adapter-status.json` 里的 `lastError`。 |
 | `lastError: "fetch failed"` 持续出现 | 出站 HTTPS 到 `opencode.ai` 被拦截；检查代理/VPN 规则。 |

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.5 (2026-09-29)
+
+### Added
+
+- **设置入口上移一级**：IP 池配置页同时注册到 `plugins.bundle.config`，打开
+  「插件 → @opencode2dsh/dsh-plugin」包详情页即可直接看到表单，无需再进入
+  组件行的「配置」。行级入口保留，两处编辑的是同一个 volatile `ipPool` 字段。
+
 ## 0.3.4 (2026-09-29)
 
 ### Fixed

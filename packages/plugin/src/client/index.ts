@@ -17,10 +17,13 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 // Type-only: pulls the renderer plugin's Context merge (ctx.slots).
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-// Type-only: pulls the plugin-manager SlotMap merge ('plugins.row.config').
+// Type-only: pulls the plugin-manager SlotMap merge ('plugins.row.config',
+// 'plugins.bundle.config').
 import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
-import { IpPoolCard } from './IpPoolCard.tsx'
-import type { IpPoolCardInjected } from './IpPoolCard.tsx'
+// Type-only: pulls the settings Context merge (ctx.configForms).
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import { IpPoolBundlePage, IpPoolCard } from './IpPoolCard.tsx'
+import type { IpPoolBundleInjected, IpPoolCardInjected } from './IpPoolCard.tsx'
 import { en, zh, type IpPoolKey } from './locales.ts'
 
 export type { IpPoolCardInjected, IpPoolCardProps, IpPoolSettingsValue } from './IpPoolCard.tsx'
@@ -36,11 +39,17 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 /** Dictionary namespace owned by this plugin. */
 const NS = 'settings.ip-pool'
 
+/** The bundle package name (the `plugins.bundle.config` key). */
+const PKG_NAME = '@opencode2dsh/dsh-plugin'
+
+/** The Host plugin entry id the bundle patch declares (its config namespace). */
+const ENTRY_ID = 'opencode2dsh'
+
 /** `<package name>#<row id>`: the row the bundle patch declares. */
 const ROW_KEY = '@opencode2dsh/dsh-plugin#opencode2dsh'
 
 /** Required services (cordis fiber inject). */
-export const inject = ['slots', 'locale']
+export const inject = ['slots', 'locale', 'configForms']
 
 /**
  * Register the IP 池 page once the `plugins.row.config` declaration is on the
@@ -53,6 +62,27 @@ export function apply(ctx: ClientContext): void {
   // One bound translate for the inject face; copy freshness rides the locale revision.
   const t = ctx.locale.bind(NS) as IpPoolCardInjected['t']
   const injected = (): IpPoolCardInjected => ({ t })
+
+  // The same page on the bundle's own detail view: the package card on the
+  // Plugins page shows the form directly, without the row's Configure step.
+  // Mounted only while the Host serves this entry's config namespace.
+  ctx.effect(() => ctx.configForms.whileServed([ENTRY_ID], () => {
+    const entryForm = ctx.configForms.get<Record<string, unknown>>(ENTRY_ID)
+    const ipPoolForm: IpPoolBundleInjected['ipPoolForm'] = {
+      getSnapshot: () => entryForm.getSnapshot(),
+      subscribe: (listener) => entryForm.subscribe(listener),
+      mutate: (ops, revision) => entryForm.mutate(ops, revision),
+    }
+    const face = (): IpPoolBundleInjected => ({ t, ipPoolForm })
+    try {
+      return ctx.slots.inject('plugins.bundle.config', () =>
+        ctx.slots.register({ name: 'plugins.bundle.config', key: PKG_NAME, locale: NS, inject: face }, IpPoolBundlePage))
+    } catch (err) {
+      // Same containment as the row page: a rejected card must not fail the fiber.
+      console.warn(`opencode2dsh: bundle configuration card rejected by this DSH build (${err instanceof Error ? err.message : String(err)})`)
+      return () => {}
+    }
+  }), 'opencode2dsh: bundle configuration card')
 
   ctx.slots.inject('plugins.row.config', () => {
     try {

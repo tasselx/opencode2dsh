@@ -59,8 +59,7 @@ entry and install the local file:
 dsh plugin --profile web add ./opencode2dsh-dsh-plugin.tgz
 ```
 
-The IP-pool settings live under **Plugins → @opencode2dsh/dsh-plugin →
-Configure**.
+The IP-pool settings live under **Plugins → @opencode2dsh/dsh-plugin** — the IP-pool form renders on the package page itself (the row's **Configure** entry also remains).
 
 **From the plugin market** (once listed there): in DSH open **Settings →
 Plugin Market**, search `opencode2dsh`, one-click install.
@@ -161,7 +160,7 @@ The plugin writes a health snapshot after every refresh round:
 
 | Symptom | Likely cause & fix |
 | --- | --- |
-| IP-pool settings page missing on DSH ≥ 0.1.7 | Plugin ≤ 0.3.3 used settings APIs that newer DSH removed. Upgrade to ≥ 0.3.4; the page lives under **Plugins → @opencode2dsh/dsh-plugin → Configure**. |
+| IP-pool settings page missing on DSH ≥ 0.1.7 | Plugin ≤ 0.3.3 used settings APIs that newer DSH removed. Upgrade to ≥ 0.3.4; the page lives under **Plugins → @opencode2dsh/dsh-plugin** — the IP-pool form is right on the package page (also under the row's **Configure**). |
 | Boot screen shows `Failed to load plugins … list slot "settings.plugin.item" requires options.id` | Your DSH is too old (≤ 0.1.0-rc.6): the settings-slot contract predates the plugin 0.3.0 browser half. Upgrade DSH to ≥ 0.1.0-rc.7 (latest recommended). Plugin ≥ 0.3.1 registers in either slot shape, so on old DSH you lose at most the settings card — model routing is unaffected. |
 | Only 3 models | Startup fetch raced your network; retries land within ~1 min. Check `adapter-status.json` for `lastError`. |
 | `lastError: "fetch failed"` persisting | Outbound HTTPS to `opencode.ai` blocked; check proxy/VPN rules. |
